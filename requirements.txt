@@ -1,0 +1,12 @@
+fastapi==0.115.*
+uvicorn==0.30.*
+langgraph==0.2.*
+dramatiq==1.17.*
+redis==5.*
+moviepy==1.0.3
+litellm==1.50.*
+pysrt==1.1.*
+openai-whisper>=20231114
+TTS==0.22.*
+python-dotenv==1.*
+pydantic==2.*
