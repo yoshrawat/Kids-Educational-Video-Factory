@@ -50,10 +50,7 @@ def generate_video_job(project_dict):
 
     # Reconstruct VideoProject from dictionary
     if isinstance(project_dict, dict):
-        # Reconstruct scenes as Scene objects
-        scenes = [Scene(**s) if isinstance(s, dict) else s for s in project_dict.get('scenes', [])]
-        project_dict['scenes'] = scenes
-        project = VideoProject(**project_dict)
+        project = VideoProject.from_dict(project_dict)
     else:
         project = project_dict
 
@@ -74,7 +71,7 @@ def generate_video_job(project_dict):
         scene_images = [image_generator.generate(s.image_prompt) for s in project.scenes]
         
         # 2️⃣ Render video
-        video_path = asyncio.run(video_provider.render(scene_images, audio))
+        video_path = asyncio.run(video_provider.render(project.scenes, audio))
 
         # 3️⃣ Subtitle
         subtitle = subtitle_service.generate(audio)

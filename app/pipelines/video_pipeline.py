@@ -32,6 +32,7 @@ class VideoPipeline:
         # 3️⃣ Trigger async video generation
         # Convert dataclass to dict for JSON serialization
         from dataclasses import asdict
-        generate_video_job.send(asdict(project))
+        # generate_video_job.send(asdict(project))
+        generate_video_job.send(project.to_dict())
 
         return project

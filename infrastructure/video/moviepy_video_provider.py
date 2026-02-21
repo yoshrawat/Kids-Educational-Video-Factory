@@ -4,9 +4,9 @@ from moviepy.editor import (
     AudioFileClip,
     concatenate_videoclips,
 )
+from infrastructure.video.comfyui_client import ComfyUIClient
+from infrastructure.video.placeholder_image_generator import PlaceholderImageGenerator
 from domain.interfaces.video_provider import VideoProvider
-from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
 import uuid
 import os
 
@@ -14,37 +14,29 @@ import os
 class MoviePyVideoProvider(VideoProvider):
 
     def __init__(self):
+        self.comfy = ComfyUIClient()
+        self.placeholder_generator = PlaceholderImageGenerator()
         os.makedirs('outputs', exist_ok=True)
 
-    async def render(self, scenes: list[str], audio: str) -> str:
+    async def render(self, scenes, audio):
         clips = []
 
-        for img in scenes:
-            # Load the image and add text overlay
-            pil_img = Image.open(img)
-            draw = ImageDraw.Draw(pil_img)
-            
-            # Try to use a nice font, fallback to default
+        for scene in scenes:
+            enriched_prompt = (
+                f"{scene.image_prompt}, dreamshaper style, "
+                "storybook illustration, soft lighting, vibrant colors"
+            )
+
+            # Try ComfyUI first, fallback to placeholders on error
             try:
-                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 30)
-            except (OSError, IOError):
-                font = ImageFont.load_default()
-            
-            # Add text overlay
-            text = "Learning is fun!"
-            bbox = draw.textbbox((0, 0), text, font=font)
-            text_width = bbox[2] - bbox[0]
-            x = (pil_img.width - text_width) // 2
-            y = 20
-            draw.text((x, y), text, fill=(255, 255, 0), font=font)
-            
-            # Save the modified image temporarily
-            temp_img_path = f"outputs/temp_scene_{uuid.uuid4()}.png"
-            pil_img.save(temp_img_path)
-            
-            # Create clip from modified image
-            clip = ImageClip(temp_img_path).set_duration(5)
-            clips.append(clip)
+                images = [self.comfy.generate_image(enriched_prompt) for _ in range(3)]
+            except Exception as e:
+                print(f"ComfyUI image generation failed: {e}. Using placeholder images instead.")
+                images = [self.placeholder_generator.generate(enriched_prompt) for _ in range(3)]
+
+            for img in images:
+                clip = ImageClip(img).set_duration(2.5)
+                clips.append(clip)
 
         video = concatenate_videoclips(clips)
         video = video.set_audio(AudioFileClip(audio))
