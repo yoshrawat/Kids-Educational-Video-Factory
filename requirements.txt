@@ -8,5 +8,9 @@ litellm==1.50.*
 pysrt==1.1.*
 openai-whisper>=20231114
 TTS==0.22.*
+transformers==4.36.*
+numpy==1.26.4
+pandas==1.5.*
 python-dotenv==1.*
 pydantic==2.*
+Pillow==10.*

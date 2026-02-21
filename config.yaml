@@ -1,6 +1,6 @@
 llm:
   provider: ollama
-  model: llama3
+  model: ollama/llama3.2:latest
 
 video:
   resolution: 1080p
