@@ -2,6 +2,8 @@
 from moviepy.editor import (
     ImageClip,
     AudioFileClip,
+    CompositeVideoClip,
+    TextClip,
     concatenate_videoclips,
 )
 from infrastructure.video.comfyui_client import ComfyUIClient
@@ -9,6 +11,7 @@ from infrastructure.video.placeholder_image_generator import PlaceholderImageGen
 from domain.interfaces.video_provider import VideoProvider
 import uuid
 import os
+from pathlib import Path
 
 
 class MoviePyVideoProvider(VideoProvider):
@@ -16,9 +19,9 @@ class MoviePyVideoProvider(VideoProvider):
     def __init__(self):
         self.comfy = ComfyUIClient()
         self.placeholder_generator = PlaceholderImageGenerator()
-        os.makedirs('outputs', exist_ok=True)
 
     async def render(self, scenes, audio):
+        os.makedirs('outputs', exist_ok=True)
         clips = []
 
         for scene in scenes:
@@ -27,16 +30,45 @@ class MoviePyVideoProvider(VideoProvider):
                 "storybook illustration, soft lighting, vibrant colors"
             )
 
-            # Try ComfyUI first, fallback to placeholders on error
+            # Try to generate images with ComfyUI, fallback to placeholders
+            images = []
             try:
-                images = [self.comfy.generate_image(enriched_prompt) for _ in range(3)]
+                for _ in range(3):
+                    img_path = self.comfy.generate_image(enriched_prompt)
+                    # Verify file exists before adding
+                    if Path(img_path).exists():
+                        images.append(img_path)
+                    else:
+                        print(f"Warning: Generated image file not found at {img_path}")
+                        # Fallback to placeholder
+                        images.append(self.placeholder_generator.generate(enriched_prompt))
             except Exception as e:
-                print(f"ComfyUI image generation failed: {e}. Using placeholder images instead.")
+                print(f"ComfyUI generation failed: {e}. Using placeholder images instead.")
                 images = [self.placeholder_generator.generate(enriched_prompt) for _ in range(3)]
 
             for img in images:
-                clip = ImageClip(img).set_duration(2.5)
-                clips.append(clip)
+                try:
+                    clip = ImageClip(img).set_duration(2.5)
+
+                    bubble = (
+                        TextClip(
+                            scene.narration[:45],
+                            fontsize=40,
+                            color="yellow",
+                            bg_color="black",
+                            font="/Users/yogeshrawat/Library/Fonts/Arial.TTF",
+                        )
+                        .set_duration(2.5)
+                        .set_position(("center", "top"))
+                    )
+
+                    clips.append(CompositeVideoClip([clip, bubble]))
+                except Exception as e:
+                    print(f"Error creating clip for image {img}: {e}")
+                    continue
+
+        if not clips:
+            raise RuntimeError("No video clips could be created")
 
         video = concatenate_videoclips(clips)
         video = video.set_audio(AudioFileClip(audio))

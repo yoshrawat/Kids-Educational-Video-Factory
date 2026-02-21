@@ -97,11 +97,19 @@ class ComfyUIClient:
         for node in history.get("outputs", {}).values():
             if "images" in node:
                 image = node["images"][0]
-                return str(
-                    Path("ComfyUI")
-                    / "output"
-                    / image["filename"]
-                )
+                # Try multiple possible paths for the output directory
+                possible_paths = [
+                    Path("ComfyUI") / "output" / image["filename"],
+                    Path.cwd() / "ComfyUI" / "output" / image["filename"],
+                    Path(__file__).resolve().parents[2] / "ComfyUI" / "output" / image["filename"],
+                ]
+                
+                for path in possible_paths:
+                    if path.exists():
+                        return str(path.resolve())
+                
+                # If no path exists, return the first one and hope it appears soon
+                return str(possible_paths[0].resolve())
 
         raise RuntimeError("No image found in ComfyUI output")
 
