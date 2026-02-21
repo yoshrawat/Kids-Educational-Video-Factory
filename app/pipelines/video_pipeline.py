@@ -30,6 +30,8 @@ class VideoPipeline:
         project.scenes = await self.story_agent.run(trend_context)
 
         # 3️⃣ Trigger async video generation
-        generate_video_job.send(project)
+        # Convert dataclass to dict for JSON serialization
+        from dataclasses import asdict
+        generate_video_job.send(asdict(project))
 
         return project
